@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ABCorretor</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f6f7f4;--card:#fff;--ink:#1d2421;--mute:#66706b;--line:#d9ddd8;--acc:#1f6f5c;--accink:#fff;--bad:#b3392f;--ok:#1f6f5c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141816;--card:#1d2421;--ink:#e8ece9;--mute:#99a39d;--line:#334039;--acc:#4cb89f;--accink:#0c1512;--bad:#e8776c;--ok:#4cb89f}}
+:root[data-theme="dark"]{--bg:#141816;--card:#1d2421;--ink:#e8ece9;--mute:#99a39d;--line:#334039;--acc:#4cb89f;--accink:#0c1512;--bad:#e8776c;--ok:#4cb89f}
+*,*:before,*:after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Georgia,"Times New Roman",serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:8px 0 4px}h2{font-size:1.15rem;margin:0 0 10px}
+p.sub{color:var(--mute);margin:0 0 14px}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+nav button{font:inherit;padding:8px 14px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;cursor:pointer}
+nav button[aria-selected=true]{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+section{display:none;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
+section.on{display:block}
+label{display:block;font-size:.9rem;color:var(--mute);margin:10px 0 3px}
+input,select,textarea{font:inherit;width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.btn{font:inherit;padding:9px 16px;border:0;border-radius:6px;background:var(--acc);color:var(--accink);cursor:pointer;margin:12px 8px 0 0}
+.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.key{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px;margin-top:8px}
+.key div{display:flex;align-items:center;gap:6px}
+.key b{min-width:26px;text-align:right;color:var(--mute);font-weight:normal}
+.key select{padding:4px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.bad{color:var(--bad)}.ok{color:var(--ok)}
+.bar{height:8px;background:var(--line);border-radius:4px;min-width:90px}.bar i{display:block;height:100%;background:var(--bad);border-radius:4px}
+.stats{display:flex;gap:24px;flex-wrap:wrap;margin:6px 0 14px}.stats div{font-size:.9rem;color:var(--mute)}.stats b{display:block;font-size:1.6rem;color:var(--ink)}
+.msg{color:var(--mute);font-size:.9rem;min-height:1.3em;margin-top:6px}
+#gate{max-width:420px;margin:12vh auto 0;padding:24px;background:var(--card);border:1px solid var(--line);border-radius:8px;text-align:center}
+#gate h1{margin-top:0}#gate p{color:var(--mute)}#gate .btn{margin:8px 4px 0}
+.acc{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.acc .btn{margin:0 0 0 6px;padding:5px 12px}
+.chk label{display:inline-flex;gap:6px;align-items:center;color:var(--ink);margin:6px 14px 0 0}
+input[type=checkbox]{width:auto}
+.key .flag select{border-color:#c77a00;box-shadow:0 0 0 2px rgba(199,122,0,.35)}
+/* folha de respostas */
+#sheet{background:#fff;color:#000;border:1px solid var(--line);padding:18px;position:relative;font-family:Arial,sans-serif;font-size:13px}
+.mk{position:absolute;width:16px;height:16px;background:#000}
+.mk.a{top:6px;left:6px}.mk.b{top:6px;right:6px}.mk.c{bottom:6px;left:6px}.mk.d{bottom:6px;right:6px}
+#sheet h3{margin:10px 0 8px;text-align:center;font-size:16px}
+.ln{display:flex;gap:14px;margin-bottom:8px}.ln span{flex:1;border-bottom:1px solid #000;padding-bottom:2px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 18px;margin:12px 14px}
+.q{display:flex;align-items:center;gap:5px;height:24px}.q em{font-style:normal;width:22px;text-align:right;font-weight:bold}
+.q u{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border:1.3px solid #000;border-radius:50%;font-size:10px;text-decoration:none}
+@media print{
+ body{background:#fff}main{padding:0;max-width:none}
+ nav,h1,p.sub,.noprint,section:not(#t-folha),#t-folha>h2,#t-folha>.btn,#t-folha>.msg{display:none!important}
+ section#t-folha{display:block;border:0;padding:0}#sheet{border:0}
+}
+</style>
+</head>
+<body>
+<main id="app">
+<h1>ABCorretor</h1>
+<p class="sub">Monte o gabarito, imprima a folha de respostas e corrija a turma com notas e estatísticas automáticas.</p>
+<nav role="tablist">
+<button role="tab" data-t="prova" aria-selected="true">1. Prova e gabarito</button>
+<button role="tab" data-t="folha" aria-selected="false">2. Folha de respostas</button>
+<button role="tab" data-t="corrigir" aria-selected="false">3. Corrigir</button>
+<button role="tab" data-t="result" aria-selected="false">4. Resultados</button>
+</nav>
+
+<section id="t-prova" class="on">
+<h2>Dados da prova</h2>
+<label for="nome">Nome da prova</label>
+<input id="nome" value="Prova 1">
+<div class="row">
+<div><label for="nq">Número de questões</label><input id="nq" type="number" min="1" max="100" value="20"></div>
+<div><label for="na">Alternativas por questão</label><select id="na"><option value="4">A–D (4)</option><option value="5" selected>A–E (5)</option></select></div>
+<div><label for="vq">Valor de cada questão</label><input id="vq" type="number" min="0" step="0.25" value="0.5"></div>
+</div>
+<h2 style="margin-top:18px">Gabarito</h2>
+<p class="sub" style="margin:0">Escolha a alternativa correta de cada questão. Use "Anulada" para dar o ponto a todos.</p>
+<div id="key" class="key"></div>
+<div class="msg" id="msg1">Tudo é salvo automaticamente neste aparelho.</div>
+<button class="btn alt" id="limpar">Apagar tudo e recomeçar</button>
+</section>
+
+<section id="t-folha">
+<h2>Folha de respostas</h2>
+<h2>Gabarito compacto (para colar no documento da escola)</h2>
+<p class="sub">Gera só o quadro de bolinhas, com os 4 quadrados pretos nos cantos. Cole a imagem no seu documento (Word, Google Docs). Ao redimensionar, mantenha a proporção e deixe os 4 quadrados visíveis.</p>
+<label for="g-col">Colunas</label>
+<select id="g-col"><option value="0">Automático</option><option value="1">1 coluna</option><option value="2">2 colunas</option><option value="3">3 colunas</option><option value="4">4 colunas</option></select>
+<button class="btn" id="g-down">Baixar imagem (PNG)</button><button class="btn alt" id="g-copy">Copiar imagem</button><button class="btn alt" id="g-pdf">Baixar folha completa (PDF)</button>
+<p class="sub" style="font-size:.9rem;margin:8px 0 0">Para personalizar escola, logo, professor, matéria e fonte do cabeçalho da folha em PDF, use a seção mais abaixo.</p>
+<div class="msg" id="g-msg">Se o botão de baixar ou copiar falhar, clique com o botão direito (ou toque e segure) na prévia abaixo e copie a imagem.</div>
+<div class="scroll" style="margin-top:10px"><img id="g-img" alt="Prévia do gabarito compacto" style="max-width:100%;max-height:420px;border:1px solid var(--line);background:#fff"></div>
+<h2 style="margin-top:26px">Folha completa em PDF (com cabeçalho da escola)</h2>
+<p class="sub">Personalize o cabeçalho com o padrão da sua escola e baixe uma folha para cada aluno. Os quadrados pretos nos cantos servem para a leitura por câmera.</p>
+<div class="row">
+<div><label for="c-escola">Nome da escola</label><input id="c-escola" autocomplete="off"></div>
+<div><label for="c-sub">Linha extra (cidade, endereço, ano letivo)</label><input id="c-sub" autocomplete="off"></div>
+<div><label for="c-prof">Professor(a)</label><input id="c-prof" autocomplete="off"></div>
+<div><label for="c-disc">Disciplina</label><input id="c-disc" autocomplete="off"></div>
+</div>
+<div class="row">
+<div><label for="c-fonte">Fonte do cabeçalho</label><select id="c-fonte"><option value="helvetica">Arial (sem serifa)</option><option value="times">Times New Roman (serifada)</option><option value="courier">Courier (máquina de escrever)</option></select></div>
+<div><label for="c-tam">Tamanho do nome da escola (10 a 18)</label><input id="c-tam" type="number" min="10" max="18" value="13"></div>
+<div><label>Negrito</label><div class="chk"><label><input type="checkbox" id="c-neg">Nome da escola em negrito</label></div></div>
+</div>
+<label for="c-logo">Logo da escola (imagem PNG ou JPG)</label>
+<input id="c-logo" type="file" accept="image/*">
+<div class="msg" id="c-logomsg"></div>
+<button class="btn alt" id="c-logodel" hidden style="margin-top:4px">Remover logo</button>
+<label>Campos para o aluno preencher</label>
+<div class="chk"><label><input type="checkbox" id="c-nome">Nome</label><label><input type="checkbox" id="c-turma">Turma</label><label><input type="checkbox" id="c-data">Data</label><label><input type="checkbox" id="c-num">Nº</label></div>
+<button class="btn" id="pdf">Baixar folha em PDF</button>
+<div class="msg" id="msgpdf">O PDF sai em tamanho A4, pronto para imprimir.</div>
+<div id="sheetwrap" style="margin-top:14px"><div id="sheet"></div></div>
+</section>
+
+<section id="t-corrigir">
+<h2>Corrigir por foto</h2>
+<p class="sub">Fotografe a folha de respostas preenchida com os 4 quadrados pretos dos cantos visíveis, na posição normal (de pé) e com boa luz. O app lê as bolinhas e você confere antes de salvar.</p>
+<label for="o-tipo">Tipo de folha</label>
+<select id="o-tipo"><option value="compact">Gabarito compacto (imagem colada no documento)</option><option value="pdf">Folha completa (PDF)</option></select>
+<input id="o-cam" type="file" accept="image/*" capture="environment" hidden>
+<input id="o-file" type="file" accept="image/*" hidden>
+<button class="btn" id="o-btnlive">Escanear ao vivo</button><button class="btn alt" id="o-btncam">Tirar foto</button><button class="btn alt" id="o-btnfile">Escolher da galeria</button><button class="btn alt" id="o-rot" hidden>Girar 90°</button>
+<div class="chk"><label><input type="checkbox" id="o-cont">Modo contínuo: depois de salvar, abrir a câmera para o próximo aluno</label></div>
+<div id="o-live" hidden>
+<div style="position:relative;width:100%;max-width:520px;margin-top:8px"><video id="o-vid" playsinline muted style="width:100%;display:block;background:#000"></video><canvas id="o-ov" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none"></canvas></div>
+<button class="btn" id="o-snap">Capturar agora</button><button class="btn alt" id="o-close">Fechar câmera</button>
+</div>
+<div class="msg" id="o-msg"></div>
+<div class="scroll"><canvas id="o-cv" style="display:none;max-width:100%;max-height:480px;border:1px solid var(--line);margin-top:8px"></canvas></div>
+<div id="o-grid" class="key"></div>
+<h2 style="margin-top:22px">Corrigir digitando</h2>
+<p class="sub">Digite as respostas marcadas na ordem, sem espaços (ex.: ABCDE...). Use ponto (.) para questão em branco.</p>
+<label for="aluno">Nome do aluno</label>
+<input id="aluno" autocomplete="off">
+<label for="resp">Respostas</label>
+<input id="resp" autocomplete="off" autocapitalize="characters" spellcheck="false">
+<div class="msg" id="cnt"></div>
+<button class="btn" id="add">Corrigir e salvar</button>
+<div class="msg" id="msg3"></div>
+</section>
+
+<section id="t-result">
+<h2>Resultados da turma</h2>
+<div class="stats" id="stats"></div>
+<div class="scroll"><table id="tbl"></table></div>
+<h2 style="margin-top:20px">Questões mais erradas</h2>
+<div class="scroll"><table id="qtbl"></table></div>
+<button class="btn" id="csv">Baixar CSV</button>
+<div class="msg" id="msgcsv"></div>
+<button class="btn alt" id="zerar">Apagar alunos</button>
+</section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const L="ABCDE";
+let S={nome:"Prova 1",nq:20,na:5,vq:0.5,key:[],alunos:[]};
+const $=id=>document.getElementById(id);
+function normCfg(){
+ S.cfg=Object.assign({escola:"",sub:"",prof:"",disc:"",logo:null,fonte:"helvetica",tam:13,neg:true},S.cfg||{});
+ S.cfg.campos=Object.assign({nome:true,turma:true,data:true,num:true},S.cfg.campos||{});
+}
+try{const r=localStorage.getItem("corretor");if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+normCfg();
+function save(){try{localStorage.setItem("corretor",JSON.stringify(S))}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function fmt(n){return (Math.round(n*100)/100).toString().replace(".",",")}
+
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x===b));
+ document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id==="t-"+b.dataset.t));
+ if(typeof liveStop==="function")liveStop();
+ render();
+});
+
+function fit(){while(S.key.length<S.nq)S.key.push("A");S.key.length=S.nq}
+function readCfg(){
+ S.nome=$("nome").value||"Prova";
+ S.nq=Math.max(1,Math.min(100,parseInt($("nq").value)||1));
+ S.na=parseInt($("na").value);S.vq=parseFloat($("vq").value)||0;
+ fit();save();render();
+}
+["nome","nq","na","vq"].forEach(i=>$(i).addEventListener("change",readCfg));
+
+function renderKey(){
+ const k=$("key");k.innerHTML="";
+ for(let i=0;i<S.nq;i++){
+  const d=document.createElement("div");
+  let o="";for(let j=0;j<S.na;j++)o+=`<option value="${L[j]}"${S.key[i]===L[j]?" selected":""}>${L[j]}</option>`;
+  o+=`<option value="*"${S.key[i]==="*"?" selected":""}>Anulada</option>`;
+  d.innerHTML=`<b>${i+1}.</b><select aria-label="Questão ${i+1}">${o}</select>`;
+  d.querySelector("select").onchange=e=>{S.key[i]=e.target.value;save()};
+  k.appendChild(d);
+ }
+}
+function renderSheet(){
+ const c=S.cfg;
+ let q="";
+ for(let i=0;i<S.nq;i++){
+  let b="";for(let j=0;j<S.na;j++)b+=`<u>${L[j]}</u>`;
+  q+=`<div class="q"><em>${i+1}</em>${b}</div>`;
+ }
+ const hdr=(c.logo||c.escola||c.sub)?`<div style="display:flex;align-items:center;gap:12px;border-bottom:1px solid #000;padding:8px 20px;margin-top:6px">${c.logo?`<img src="${c.logo.d}" alt="" style="max-height:48px;max-width:90px">`:""}<div style="flex:1;text-align:center"><b style="font-size:${(c.tam||13)+2}px;font-weight:${c.neg===false?400:700}">${esc(c.escola)}</b><br>${esc(c.sub)}</div></div>`:"";
+ const info=[c.prof?"Professor(a): "+esc(c.prof):"",c.disc?"Disciplina: "+esc(c.disc):""].filter(Boolean).join(" &nbsp;&nbsp; ");
+ const F={turma:"Turma:",data:"Data:",num:"Nº:"};
+ let fl=c.campos.nome?'<div class="ln"><span>Nome:</span></div>':"";
+ const rest=["turma","data","num"].filter(k=>c.campos[k]);
+ for(let i=0;i<rest.length;i+=2)fl+='<div class="ln">'+rest.slice(i,i+2).map(k=>`<span>${F[k]}</span>`).join("")+'</div>';
+ $("sheet").innerHTML=`<i class="mk a"></i><i class="mk b"></i><i class="mk c"></i><i class="mk d"></i>${hdr}
+ <h3>${esc(S.nome)} – Folha de respostas</h3>
+ ${info?`<p style="text-align:center;margin:0 0 8px">${info}</p>`:""}
+ ${fl}
+ <p style="text-align:center;margin:6px 0">Preencha completamente uma bolinha por questão, com caneta azul ou preta.</p>
+ <div class="cols">${q}</div>`;
+ $("sheet").style.fontFamily=({helvetica:"Arial,sans-serif",times:"'Times New Roman',serif",courier:"'Courier New',monospace"})[c.fonte]||"Arial,sans-serif";
+ renderCompact();
+}
+function cfgInit(){
+ const c=S.cfg;
+ $("c-escola").value=c.escola;$("c-sub").value=c.sub;$("c-prof").value=c.prof;$("c-disc").value=c.disc;
+ ["nome","turma","data","num"].forEach(k=>$("c-"+k).checked=!!c.campos[k]);
+ $("c-fonte").value=c.fonte;$("c-tam").value=c.tam;$("c-neg").checked=c.neg!==false;
+ $("c-logodel").hidden=!c.logo;
+ $("c-logomsg").textContent=c.logo?"Logo carregada.":"Nenhuma logo carregada.";
+}
+[["escola","c-escola"],["sub","c-sub"],["prof","c-prof"],["disc","c-disc"]].forEach(a=>$(a[1]).addEventListener("input",e=>{S.cfg[a[0]]=e.target.value;save();renderSheet()}));
+["nome","turma","data","num"].forEach(k=>$("c-"+k).addEventListener("change",e=>{S.cfg.campos[k]=e.target.checked;save();renderSheet()}));
+$("c-fonte").addEventListener("change",e=>{S.cfg.fonte=e.target.value;save();renderSheet()});
+$("c-tam").addEventListener("change",e=>{S.cfg.tam=Math.max(10,Math.min(18,parseInt(e.target.value)||13));e.target.value=S.cfg.tam;save();renderSheet()});
+$("c-neg").addEventListener("change",e=>{S.cfg.neg=e.target.checked;save();renderSheet()});
+$("c-logodel").onclick=()=>{S.cfg.logo=null;$("c-logo").value="";save();cfgInit();renderSheet()};
+$("c-logo").onchange=e=>{
+ const f=e.target.files[0];if(!f)return;
+ const fr=new FileReader();
+ fr.onload=()=>{
+  const im=new Image();
+  im.onload=()=>{
+   const m=Math.min(1,500/Math.max(im.width,im.height)),w=Math.max(1,Math.round(im.width*m)),h=Math.max(1,Math.round(im.height*m));
+   const cv=document.createElement("canvas");cv.width=w;cv.height=h;
+   cv.getContext("2d").drawImage(im,0,0,w,h);
+   const png=f.type==="image/png";
+   S.cfg.logo={d:cv.toDataURL(png?"image/png":"image/jpeg",0.9),w,h,t:png?"PNG":"JPEG"};
+   save();cfgInit();renderSheet();
+  };
+  im.onerror=()=>{$("c-logomsg").textContent="Não foi possível ler essa imagem. Tente um PNG ou JPG."};
+  im.src=fr.result;
+ };
+ fr.readAsDataURL(f);
+};
+function score(resp){
+ let ac=0,det=[];
+ for(let i=0;i<S.nq;i++){
+  const r=resp[i]||".",k=S.key[i];
+  const ok=k==="*"||r===k;if(ok)ac++;det.push(ok);
+ }
+ return {ac,det,nota:ac*S.vq};
+}
+function renderCount(){
+ const v=$("resp").value.toUpperCase().replace(/[^A-E.]/g,"");
+ $("cnt").textContent=`${v.length} de ${S.nq} respostas digitadas`;
+}
+$("resp").addEventListener("input",renderCount);
+$("add").onclick=()=>{
+ const nome=$("aluno").value.trim();
+ const r=$("resp").value.toUpperCase().replace(/[^A-E.]/g,"");
+ if(!nome){$("msg3").textContent="Digite o nome do aluno.";return}
+ if(r.length!==S.nq){$("msg3").textContent=`Faltam ou sobram respostas: digitou ${r.length}, a prova tem ${S.nq}.`;return}
+ const s=score(r);
+ S.alunos.push({nome,resp:r});save();
+ $("msg3").textContent=`${nome}: ${s.ac} de ${S.nq} acertos, nota ${fmt(s.nota)}. Salvo.`;
+ $("aluno").value="";$("resp").value="";renderCount();if(typeof omrReset==="function")omrReset();if($("o-cont").checked)$("o-cam").click();else $("aluno").focus();
+};
+function renderRes(){
+ const n=S.alunos.length,sc=S.alunos.map(a=>score(a.resp));
+ const notas=sc.map(s=>s.nota);
+ const med=n?notas.reduce((a,b)=>a+b,0)/n:0;
+ $("stats").innerHTML=`<div><b>${n}</b>alunos</div><div><b>${fmt(med)}</b>média</div><div><b>${n?fmt(Math.max(...notas)):"–"}</b>maior nota</div><div><b>${n?fmt(Math.min(...notas)):"–"}</b>menor nota</div><div><b>${fmt(S.nq*S.vq)}</b>nota máxima</div>`;
+ let h="<tr><th>Aluno</th><th>Acertos</th><th>Nota</th><th></th></tr>";
+ if(!n)h+='<tr><td colspan="4">Nenhum aluno corrigido ainda. Vá em "3. Corrigir".</td></tr>';
+ S.alunos.forEach((a,i)=>{h+=`<tr><td>${esc(a.nome)}</td><td>${sc[i].ac}/${S.nq}</td><td>${fmt(sc[i].nota)}</td><td><button class="btn alt" style="margin:0;padding:3px 9px" data-d="${i}" aria-label="Remover ${esc(a.nome)}">Remover</button></td></tr>`});
+ $("tbl").innerHTML=h;
+ $("tbl").querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{S.alunos.splice(+b.dataset.d,1);save();renderRes()});
+ let rows=[];
+ for(let i=0;i<S.nq;i++){
+  if(S.key[i]==="*")continue;
+  const er=sc.filter(s=>!s.det[i]).length;
+  rows.push({q:i+1,er,p:n?er/n*100:0});
+ }
+ rows.sort((a,b)=>b.er-a.er);
+ let q="<tr><th>Questão</th><th>Erros</th><th>% da turma</th><th></th></tr>";
+ if(!n)q+='<tr><td colspan="4">Aparece depois da primeira correção.</td></tr>';
+ else rows.slice(0,10).forEach(r=>{q+=`<tr><td>${r.q}</td><td>${r.er}</td><td class="bad">${Math.round(r.p)}%</td><td><div class="bar"><i style="width:${r.p}%"></i></div></td></tr>`});
+ $("qtbl").innerHTML=q;
+}
+async function saveFile(name,data,msgEl){
+ try{
+  const tipo=name.endsWith(".pdf")?"application/pdf":name.endsWith(".png")?"image/png":"text/csv;charset=utf-8";
+  const b=data instanceof Blob?data:new Blob([data],{type:tipo});
+  const u=URL.createObjectURL(b),a=document.createElement("a");
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),3000);
+  if(msgEl)msgEl.textContent="Arquivo "+name+" gerado. Veja na pasta de downloads.";
+ }catch(e){if(msgEl)msgEl.textContent="Não foi possível baixar o arquivo. Tente de novo."}
+}
+const safe=t=>(t||"prova").replace(/[^\w\-]+/g,"_");
+$("csv").onclick=()=>{
+ let c="Aluno;Acertos;Nota";for(let i=1;i<=S.nq;i++)c+=";Q"+i;c+="\n";
+ S.alunos.forEach(a=>{const s=score(a.resp);c+=`"${a.nome.replace(/"/g,'""')}";${s.ac};${fmt(s.nota)}`;s.det.forEach(d=>c+=";"+(d?1:0));c+="\n"});
+ saveFile(safe(S.nome)+".csv","\ufeff"+c,$("msgcsv"));
+};
+function doPdf(m){
+ const c=S.cfg;
+ if(!window.jspdf){m.textContent="Não foi possível carregar o gerador de PDF. Verifique a internet.";return}
+ const d=new window.jspdf.jsPDF({unit:"mm",format:"a4"});
+ d.setFillColor(0,0,0);
+ [[10,10],[194,10],[10,281],[194,281]].forEach(p=>d.rect(p[0],p[1],6,6,"F"));
+ const F=c.fonte||"helvetica",tam=c.tam||13,mm=0.3528,fb=c.neg===false?"normal":"bold";
+ let y=14;
+ const hasH=c.logo||c.escola||c.sub;
+ if(c.logo){
+  const bw=34,bh=20,r=Math.min(bw/c.logo.w,bh/c.logo.h),w=c.logo.w*r,h=c.logo.h*r;
+  try{d.addImage(c.logo.d,c.logo.t,20,9+(bh-h)/2,w,h)}catch(e){}
+ }
+ if(hasH){
+  const cx=c.logo?124:105,wd=c.logo?125:170,ss=Math.max(8,tam-4);
+  d.setFont(F,fb);d.setFontSize(tam);
+  const el=c.escola?d.splitTextToSize(c.escola,wd).slice(0,2):[];
+  d.setFont(F,"normal");d.setFontSize(ss);
+  const sl=c.sub?d.splitTextToSize(c.sub,wd).slice(0,2):[];
+  const lhE=tam*mm*1.15,lhS=ss*mm*1.15,gap=(el.length&&sl.length)?1.5:0;
+  const tot=el.length*lhE+sl.length*lhS+gap;
+  const top=Math.max(11,20-tot/2);
+  if(el.length){d.setFont(F,fb);d.setFontSize(tam);d.text(el,cx,top+tam*mm*0.9,{align:"center"})}
+  if(sl.length){d.setFont(F,"normal");d.setFontSize(ss);d.text(sl,cx,top+el.length*lhE+gap+ss*mm*0.9,{align:"center"})}
+  const ly=Math.max(32,top+tot+3);
+  d.setLineWidth(0.4);d.line(20,ly,190,ly);y=ly;
+ }
+ y+=10;
+ d.setFont(F,"bold");d.setFontSize(13);
+ d.text(d.splitTextToSize(S.nome+" - Folha de respostas",170).slice(0,2),105,y,{align:"center"});
+ const info=[c.prof?"Professor(a): "+c.prof:"",c.disc?"Disciplina: "+c.disc:""].filter(Boolean).join("      ");
+ d.setFont(F,"normal");d.setFontSize(9);
+ if(info){y+=8;d.text(info,105,y,{align:"center"})}
+ d.setFontSize(10);d.setLineWidth(0.3);
+ y+=9;
+ if(c.campos.nome){d.text("Nome:",20,y);d.line(33,y,190,y);y+=9}
+ const rest=[["turma","Turma:"],["data","Data:"],["num","N\u00BA:"]].filter(f=>c.campos[f[0]]);
+ for(let i=0;i<rest.length;i+=2){
+  rest.slice(i,i+2).forEach((f,k)=>{
+   const x=k?110:20,tw=d.getTextWidth(f[1]);
+   d.text(f[1],x,y);d.line(x+tw+2,y,k?190:100,y);
+  });
+  y+=9;
+ }
+ y+=2;
+ d.setFontSize(9);
+ d.text("Preencha completamente uma bolinha por quest\u00E3o, com caneta azul ou preta.",105,97,{align:"center"});
+ const y0=106;
+ const cols=Math.min(4,Math.ceil(S.nq/25)),rows=Math.ceil(S.nq/cols),cw=46,x0=(210-cols*cw)/2;
+ for(let i=0;i<S.nq;i++){
+  const cc=Math.floor(i/rows),r=i%rows,x=x0+cc*cw,yy=y0+r*7;
+  d.setFont("helvetica","bold");d.setFontSize(9);
+  d.text(String(i+1),x+6,yy+1,{align:"right"});
+  d.setFont("helvetica","normal");d.setFontSize(7);
+  for(let j=0;j<S.na;j++){
+   const cx=x+12+j*7;
+   d.circle(cx,yy,2.4,"S");
+   d.text(L[j],cx,yy+1,{align:"center"});
+  }
+ }
+ saveFile(safe(S.nome)+"_folha.pdf",d.output("arraybuffer"),m);
+}
+$("pdf").onclick=()=>doPdf($("msgpdf"));
+$("g-pdf").onclick=()=>doPdf($("g-msg"));
+function makeCompact(){
+ const u=12,cw=46,nc=parseInt($("g-col").value)||0;
+ const cols=nc||Math.min(4,Math.ceil(S.nq/25)),rows=Math.ceil(S.nq/cols);
+ const W=8+(cols-1)*cw+12+(S.na-1)*7+2.4+8,H=rows*7+20;
+ const cv=document.createElement("canvas");
+ const M=4;cv.width=Math.round((W+2*M)*u);cv.height=Math.round((H+2*M)*u);
+ const g=cv.getContext("2d");
+ g.fillStyle="#fff";g.fillRect(0,0,cv.width,cv.height);
+ g.translate(M*u,M*u);
+ g.fillStyle="#000";const mk=5*u;
+ [[0,0],[W*u-mk,0],[0,H*u-mk],[W*u-mk,H*u-mk]].forEach(p=>g.fillRect(p[0],p[1],mk,mk));
+ g.strokeStyle="#000";g.lineWidth=0.3*u;g.textBaseline="middle";
+ for(let i=0;i<S.nq;i++){
+  const c=Math.floor(i/rows),r=i%rows,x=8+c*cw,y=10+r*7;
+  g.fillStyle="#000";g.textAlign="right";g.font="bold "+(3.2*u)+"px Arial,sans-serif";
+  g.fillText(String(i+1),(x+6)*u,y*u);
+  g.textAlign="center";g.font=(2.4*u)+"px Arial,sans-serif";
+  for(let j=0;j<S.na;j++){
+   const cx=(x+12+j*7)*u;
+   g.beginPath();g.arc(cx,y*u,2.4*u,0,Math.PI*2);g.stroke();
+   g.fillText(L[j],cx,y*u+u*0.1);
+  }
+ }
+ return cv;
+}
+function renderCompact(){
+ try{$("g-img").src=makeCompact().toDataURL("image/png")}catch(e){}
+}
+const toBlob=cv=>new Promise(r=>cv.toBlob(r,"image/png"));
+$("g-col").addEventListener("change",renderCompact);
+$("g-down").onclick=async()=>{
+ const b=await toBlob(makeCompact());
+ await saveFile(safe(S.nome)+"_gabarito.png",b,$("g-msg"));
+};
+$("g-copy").onclick=async()=>{
+ const m=$("g-msg");
+ try{
+  const b=await toBlob(makeCompact());
+  await navigator.clipboard.write([new ClipboardItem({"image/png":b})]);
+  m.textContent="Imagem copiada. Cole no documento com Ctrl+V (ou tocar e segurar > Colar).";
+ }catch(e){
+  m.textContent="O navegador bloqueou a cópia. Use \"Baixar imagem\" ou clique com o botão direito (toque e segure) na prévia e copie a imagem.";
+ }
+};
+/* ===== leitura por foto (OMR) ===== */
+function omrBuildModel(type,nq,na,gcol){
+ const cw=46;
+ if(type==="pdf"){
+  const cols=Math.min(4,Math.ceil(nq/25)),rows=Math.ceil(nq/cols),x0=(210-cols*cw)/2;
+  return {markers:[[13,13],[197,13],[13,284],[197,284]],nq,na,paper:[210,297],
+   pos:(i,j)=>[x0+Math.floor(i/rows)*cw+12+j*7,106+(i%rows)*7]};
+ }
+ const cols=gcol||Math.min(4,Math.ceil(nq/25)),rows=Math.ceil(nq/cols);
+ const W=8+(cols-1)*cw+12+(na-1)*7+2.4+8,H=rows*7+20;
+ return {markers:[[2.5,2.5],[W-2.5,2.5],[2.5,H-2.5],[W-2.5,H-2.5]],nq,na,paper:[W,H],
+  pos:(i,j)=>[8+Math.floor(i/rows)*cw+12+j*7,10+(i%rows)*7]};
+}
+function omrGray(data,n){const g=new Uint8Array(n);for(let i=0,k=0;i<n;i++,k+=4)g[i]=(data[k]*77+data[k+1]*150+data[k+2]*29)>>8;return g}
+function omrBinarize(g,w,h){
+ const W1=w+1,I=new Float64Array(W1*(h+1));
+ for(let y=0;y<h;y++){let row=0;for(let x=0;x<w;x++){row+=g[y*w+x];I[(y+1)*W1+x+1]=I[y*W1+x+1]+row}}
+ const r=Math.max(8,Math.round(Math.max(w,h)/28)),m=new Uint8Array(w*h);
+ for(let y=0;y<h;y++){
+  const y0=Math.max(0,y-r),y1=Math.min(h,y+r+1);
+  for(let x=0;x<w;x++){
+   const x0=Math.max(0,x-r),x1=Math.min(w,x+r+1);
+   const s=I[y1*W1+x1]-I[y0*W1+x1]-I[y1*W1+x0]+I[y0*W1+x0];
+   if(g[y*w+x]<s/((x1-x0)*(y1-y0))*0.8)m[y*w+x]=1;
+  }
+ }
+ return m;
+}
+function omrSolveH(src,dst){
+ const A=[];
+ for(let i=0;i<4;i++){const x=src[i][0],y=src[i][1],u=dst[i][0],v=dst[i][1];
+  A.push([x,y,1,0,0,0,-u*x,-u*y,u]);A.push([0,0,0,x,y,1,-v*x,-v*y,v]);}
+ for(let c=0;c<8;c++){
+  let p=c;for(let r=c+1;r<8;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;
+  if(Math.abs(A[p][c])<1e-12)return null;
+  const t=A[c];A[c]=A[p];A[p]=t;
+  for(let r=0;r<8;r++)if(r!==c){const f=A[r][c]/A[c][c];for(let k=c;k<9;k++)A[r][k]-=f*A[c][k];}
+ }
+ return A.map((row,i)=>row[8]/row[i]).slice(0,8);
+}
+function omrApply(H,x,y){const d=H[6]*x+H[7]*y+1;return [(H[0]*x+H[1]*y+H[2])/d,(H[3]*x+H[4]*y+H[5])/d]}
+function omrFindMarkers(m,w,h){
+ const n=w*h,lab=new Int32Array(n),st=new Int32Array(n),comps=[];
+ const big=Math.max(w,h),minS=Math.max(10,big*0.01),maxS=big*0.2;
+ let id=0;
+ for(let s=0;s<n;s++){
+  if(!m[s]||lab[s])continue;
+  id++;let sp=0;st[sp++]=s;lab[s]=id;
+  let cnt=0,sx=0,sy=0,x0=w,x1=0,y0=h,y1=0;
+  while(sp){
+   const p=st[--sp],x=p%w,y=(p-x)/w;
+   cnt++;sx+=x;sy+=y;
+   if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
+   if(x>0&&m[p-1]&&!lab[p-1]){lab[p-1]=id;st[sp++]=p-1}
+   if(x<w-1&&m[p+1]&&!lab[p+1]){lab[p+1]=id;st[sp++]=p+1}
+   if(y>0&&m[p-w]&&!lab[p-w]){lab[p-w]=id;st[sp++]=p-w}
+   if(y<h-1&&m[p+w]&&!lab[p+w]){lab[p+w]=id;st[sp++]=p+w}
+  }
+  const bw=x1-x0+1,bh=y1-y0+1;
+  if(bw<minS||bh<minS||bw>maxS||bh>maxS)continue;
+  const asp=bw/bh;if(asp<0.6||asp>1.67)continue;
+  if(cnt/(bw*bh)<0.55)continue;
+  const cx=sx/cnt,cy=sy/cnt;let r2=0;
+  for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)if(lab[y*w+x]===id){const d=(x-cx)*(x-cx)+(y-cy)*(y-cy);if(d>r2)r2=d}
+  const q=Math.sqrt(r2)/Math.sqrt(cnt/Math.PI);
+  if(q<1.1||q>1.5)continue;
+  comps.push({cx,cy,cnt});
+ }
+ if(comps.length<4)return null;
+ comps.sort((a,b)=>b.cnt-a.cnt);
+ for(const a of comps){
+  const g=comps.filter(b=>b.cnt>a.cnt*0.6&&b.cnt<a.cnt*1.6);
+  if(g.length<4)continue;
+  const by=(f)=>g.reduce((p,c)=>f(c)<f(p)?c:p);
+  const TL=by(c=>c.cx+c.cy),BR=by(c=>-(c.cx+c.cy)),TR=by(c=>-(c.cx-c.cy)),BL=by(c=>c.cx-c.cy);
+  if(new Set([TL,TR,BL,BR]).size<4)continue;
+  return [[TL.cx,TL.cy],[TR.cx,TR.cy],[BL.cx,BL.cy],[BR.cx,BR.cy]];
+ }
+ return null;
+}
+function omrRead(g,w,h,model){
+ const m=omrBinarize(g,w,h),mk=omrFindMarkers(m,w,h);
+ if(!mk)return {error:"markers"};
+ const d=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+ const mw=model.markers[1][0]-model.markers[0][0],mh=model.markers[2][1]-model.markers[0][1];
+ const got=((d(mk[0],mk[1])+d(mk[2],mk[3]))/2)/((d(mk[0],mk[2])+d(mk[1],mk[3]))/2),exp=mw/mh;
+ if(got/exp>1.35||got/exp<0.74)return {error:(got*exp>0.74&&got*exp<1.35)?"rot90":"aspect",markers:mk};
+ const H=omrSolveH(model.markers,mk);
+ if(!H)return {error:"markers"};
+ const scale=d(mk[0],mk[1])/mw;
+ if(scale<3.5)return {error:"low",scale,markers:mk};
+ const rad=[1.2,1.5,1.8],NA=16,answers=[];
+ for(let i=0;i<model.nq;i++){
+  const f=[];
+  for(let j=0;j<model.na;j++){
+   const p=model.pos(i,j);let c=0,t=0;
+   for(const rr of rad)for(let k=0;k<NA;k++){
+    const a=k*2*Math.PI/NA,q=omrApply(H,p[0]+rr*Math.cos(a),p[1]+rr*Math.sin(a));
+    const xi=Math.round(q[0]),yi=Math.round(q[1]);t++;
+    if(xi>=0&&yi>=0&&xi<w&&yi<h&&m[yi*w+xi])c++;
+   }
+   f.push(c/t);
+  }
+  let bi=0;f.forEach((v,j)=>{if(v>f[bi])bi=j});
+  const dark=f.filter(v=>v>=0.4).length;
+  let ans,flag=false;
+  if(dark===1)ans="ABCDE"[bi];
+  else if(dark===0){if(f[bi]>=0.22){ans="ABCDE"[bi];flag=true}else ans="."}
+  else{ans="ABCDE"[bi];flag=true}
+  answers.push({ans,flag,f});
+ }
+ return {answers,H,scale,markers:mk};
+}
+function omrRotate90(g,w,h){const o=new Uint8Array(w*h);for(let y=0;y<h;y++)for(let x=0;x<w;x++)o[x*h+(h-1-y)]=g[y*w+x];return {g:o,w:h,h:w}}
+
+const OMR={cv:null};
+const omrMsg=t=>{$("o-msg").textContent=t};
+function omrReset(){liveStop();OMR.cv=null;$("o-grid").innerHTML="";$("o-cv").style.display="none";$("o-rot").hidden=true;omrMsg("")}
+function omrLoad(file){
+ if(!file)return;
+ liveStop();
+ omrMsg("Carregando a imagem…");
+ const url=URL.createObjectURL(file),im=new Image();
+ im.onload=()=>{
+  const k=Math.min(1,1800/Math.max(im.naturalWidth,im.naturalHeight));
+  const cv=document.createElement("canvas");
+  cv.width=Math.round(im.naturalWidth*k);cv.height=Math.round(im.naturalHeight*k);
+  cv.getContext("2d").drawImage(im,0,0,cv.width,cv.height);
+  URL.revokeObjectURL(url);OMR.cv=cv;omrRun(true);
+ };
+ im.onerror=()=>omrMsg("Não foi possível abrir essa imagem. Tente outra foto.");
+ im.src=url;
+}
+function omrRotCanvas(){
+ const c=OMR.cv,n=document.createElement("canvas");n.width=c.height;n.height=c.width;
+ const g=n.getContext("2d");g.translate(n.width,0);g.rotate(Math.PI/2);g.drawImage(c,0,0);OMR.cv=n;
+}
+function omrRun(auto){
+ const c=OMR.cv,w=c.width,h=c.height;
+ const gray=omrGray(c.getContext("2d").getImageData(0,0,w,h).data,w*h);
+ const model=omrBuildModel($("o-tipo").value,S.nq,S.na,parseInt($("g-col").value)||0);
+ const res=omrRead(gray,w,h,model);
+ if(res.error==="rot90"&&auto){omrRotCanvas();return omrRun(false)}
+ const dc=$("o-cv");dc.width=w;dc.height=h;dc.style.display="block";dc.getContext("2d").drawImage(c,0,0);
+ $("o-rot").hidden=false;
+ if(res.error){
+  $("o-grid").innerHTML="";
+  omrMsg({markers:"Não encontrei os 4 quadrados pretos dos cantos. Fotografe a folha inteira, com os quatro quadrados visíveis e boa luz.",
+   aspect:"A folha da foto não bate com a configurada. Confira o tipo de folha, o número de questões e as colunas, ou use Girar 90°.",
+   rot90:"A folha parece estar deitada. Use o botão Girar 90°.",
+   low:"A folha ficou pequena demais na foto. Aproxime a câmera."}[res.error]||"Não foi possível ler a folha.");
+  return;
+ }
+ const g=dc.getContext("2d"),sc=res.scale;
+ g.lineWidth=Math.max(2,sc*0.35);g.strokeStyle="#1fb88a";
+ res.markers.forEach(p=>{g.beginPath();g.arc(p[0],p[1],sc*3.5,0,Math.PI*2);g.stroke()});
+ res.answers.forEach((a,i)=>{
+  const j=L.indexOf(a.ans);if(j<0||j>=S.na)return;
+  const q=omrApply(res.H,...model.pos(i,j));
+  g.fillStyle=a.flag?"rgba(230,140,0,.55)":"rgba(31,184,138,.45)";
+  g.beginPath();g.arc(q[0],q[1],sc*2.7,0,Math.PI*2);g.fill();
+ });
+ OMR.vals=res.answers.map(a=>a.ans);
+ $("o-grid").innerHTML=res.answers.map((a,i)=>{
+  let o="";for(let j=0;j<S.na;j++)o+=`<option value="${L[j]}"${a.ans===L[j]?" selected":""}>${L[j]}</option>`;
+  o+=`<option value="."${a.ans==="."?" selected":""}>—</option>`;
+  return `<div class="${a.flag?"flag":""}"><b>${i+1}.</b><select data-i="${i}" aria-label="Questão ${i+1}">${o}</select></div>`;
+ }).join("");
+ omrSync();
+ const fl=res.answers.map((a,i)=>a.flag?i+1:0).filter(Boolean),bl=res.answers.filter(a=>a.ans===".").length;
+ omrMsg(`Leitura concluída: ${S.nq-bl} respostas lidas, ${bl} em branco. `+(fl.length?`Confira as questões em laranja (${fl.join(", ")}). `:"Nenhuma dúvida. ")+"Digite o nome do aluno abaixo e salve.");
+}
+function omrSync(){$("resp").value=OMR.vals.join("");renderCount()}
+$("o-grid").addEventListener("change",e=>{
+ const i=e.target.dataset&&e.target.dataset.i;if(i===undefined)return;
+ OMR.vals[+i]=e.target.value;e.target.parentNode.classList.remove("flag");omrSync();
+});
+$("o-btncam").onclick=()=>$("o-cam").click();
+$("o-btnfile").onclick=()=>$("o-file").click();
+["o-cam","o-file"].forEach(id=>$(id).addEventListener("change",e=>{omrLoad(e.target.files[0]);e.target.value=""}));
+$("o-rot").onclick=()=>{if(OMR.cv){omrRotCanvas();omrRun(false)}};
+$("o-tipo").addEventListener("change",()=>{if(OMR.cv)omrRun(false)});
+let LIVE=null;
+async function liveStart(){
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){omrMsg("Este navegador não abre a câmera dentro da página. Use \"Tirar foto\".");return}
+ try{
+  const pp=document.permissionsPolicy||document.featurePolicy;
+  if(pp&&pp.allowsFeature&&!pp.allowsFeature("camera")){
+   omrMsg("A câmera ao vivo está bloqueada nesta página por uma restrição de segurança do navegador. Use \"Tirar foto\": ela abre a câmera do celular e lê a folha do mesmo jeito.");return;
+  }
+ }catch(e){}
+ omrMsg("Abrindo a câmera…");
+ try{
+  let st;
+  try{st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false})}
+  catch(e){if(e&&e.name==="OverconstrainedError")st=await navigator.mediaDevices.getUserMedia({video:true,audio:false});else throw e}
+  const v=$("o-vid");v.srcObject=st;await v.play();
+  LIVE={st,last:"",n:0};
+  $("o-live").hidden=false;omrMsg("Aponte para a folha, com os 4 quadrados pretos dos cantos à vista.");
+  liveLoop();
+ }catch(e){
+  const n=e&&e.name;
+  omrMsg(n==="NotFoundError"?"Não encontrei uma câmera neste aparelho.":
+   n==="NotReadableError"?"A câmera está sendo usada por outro app. Feche-o e tente de novo.":
+   (n==="NotAllowedError"||n==="SecurityError")?"A câmera foi bloqueada. Se o navegador perguntou, permita o acesso. Se nem perguntou, a página não tem permissão de câmera aqui. Use \"Tirar foto\", que abre a câmera do celular.":
+   "Não consegui abrir a câmera. Use \"Tirar foto\".");
+ }
+}
+function liveStop(){
+ if(!LIVE)return;
+ const l=LIVE;LIVE=null;
+ l.st.getTracks().forEach(t=>t.stop());
+ $("o-vid").srcObject=null;$("o-live").hidden=true;
+}
+function liveFrame(max){
+ const v=$("o-vid"),k=Math.min(1,max/Math.max(v.videoWidth,v.videoHeight));
+ const cv=document.createElement("canvas");cv.width=Math.round(v.videoWidth*k);cv.height=Math.round(v.videoHeight*k);
+ cv.getContext("2d",{willReadFrequently:true}).drawImage(v,0,0,cv.width,cv.height);
+ return cv;
+}
+function liveLoop(){
+ const l=LIVE;if(!l)return;
+ const v=$("o-vid");
+ if(v.videoWidth){
+  const cv=liveFrame(1280),w=cv.width,h=cv.height;
+  const gray=omrGray(cv.getContext("2d").getImageData(0,0,w,h).data,w*h);
+  const res=omrRead(gray,w,h,omrBuildModel($("o-tipo").value,S.nq,S.na,parseInt($("g-col").value)||0));
+  if(LIVE!==l)return;
+  const oc=$("o-ov");oc.width=w;oc.height=h;
+  const g=oc.getContext("2d");g.clearRect(0,0,w,h);
+  if(res.markers){
+   const m=res.markers;
+   g.lineWidth=Math.max(3,w/300);g.strokeStyle=res.error?"#e0a000":"#1fb88a";
+   g.beginPath();g.moveTo(...m[0]);g.lineTo(...m[1]);g.lineTo(...m[3]);g.lineTo(...m[2]);g.closePath();g.stroke();
+  }
+  if(res.error){
+   l.last="";l.n=0;
+   omrMsg({markers:"Procurando os 4 quadrados pretos dos cantos…",aspect:"A folha não bate com a configurada. Confira o tipo de folha, o número de questões e as colunas.",rot90:"A folha parece estar deitada. Gire a folha ou o celular.",low:"Aproxime a câmera da folha."}[res.error]||"Procurando a folha…");
+  }else{
+   const key=res.answers.map(a=>a.ans+(a.flag?"?":"")).join("");
+   if(key===l.last)l.n++;else{l.last=key;l.n=1}
+   omrMsg("Lendo a folha… mantenha firme ("+l.n+"/3)");
+   if(l.n>=3){OMR.cv=liveFrame(1920);liveStop();omrRun(false);return}
+  }
+ }
+ setTimeout(liveLoop,120);
+}
+$("o-btnlive").onclick=liveStart;
+$("o-close").onclick=()=>{liveStop();omrMsg("")};
+$("o-snap").onclick=()=>{if(LIVE&&$("o-vid").videoWidth){OMR.cv=liveFrame(1920);liveStop();omrRun(true)}};
+$("zerar").onclick=()=>{if(confirm("Apagar todos os alunos corrigidos?")){S.alunos=[];save();renderRes()}};
+$("limpar").onclick=()=>{if(confirm("Apagar prova, gabarito e alunos?")){S={nome:"Prova 1",nq:20,na:5,vq:0.5,key:[],alunos:[]};normCfg();fit();save();init()}};
+function render(){renderSheet();renderRes();renderCount()}
+function init(){
+ fit();$("nome").value=S.nome;$("nq").value=S.nq;$("na").value=S.na;$("vq").value=S.vq;
+ renderKey();cfgInit();render();
+}
+const oldRead=readCfg;
+["nq","na"].forEach(i=>$(i).addEventListener("change",renderKey));
+init();
+
+</script>
+</body>
+</html>
